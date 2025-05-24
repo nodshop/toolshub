@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate Online Tools Hub</title>
+<meta name="description" content="Access 40+ free online tools: unit converters, calculators, editors, graphics, compression, and more.">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+    --bg: #f6f8fa;
+    --fg: #111;
+    --card-bg: #fff;
+    --card-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    --primary: #2d8cf0;
+    --border: #222;    /* Light mode: dark border */
+    --icon: #555;
+    --radius: 1.5rem;
+}
+[data-theme="dark"] {
+    --bg: #15191e;
+    --fg: #f3f3f3;
+    --card-bg: #20242b;
+    --card-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    --primary: #4fc3f7;
+    --border: #fff;    /* Dark mode: white border */
+    --icon: #b3b6bd;
+}
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    margin: 0; min-height: 100vh;
+    transition: background .2s, color .2s;
+}
+.container { max-width: 1300px; margin: 2rem auto; padding: 1rem;}
+header {display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;}
+.site-title {font-size: 2.4rem; font-weight: bold; letter-spacing: .5px;}
+.toggle-theme {background: none; border: none; font-size: 2rem; cursor: pointer; color: var(--icon); transition: color .2s;}
+.search-bar {display: flex; justify-content: center; margin-bottom: 1.5rem;}
+.search-bar input {width: 320px; max-width: 95vw; padding: 0.8rem 1.2rem; font-size: 1.1rem; border-radius: 2rem;
+    border: 1px solid var(--border); outline: none; background: var(--card-bg); color: var(--fg);
+    box-shadow: var(--card-shadow); transition: border .2s;}
+.tools-grid {display: grid; grid-template-columns: repeat(auto-fit, minmax(275px, 1fr)); gap: 1.2rem;}
+.tool-card {background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--card-shadow); padding: 1.2rem 1.1rem 1rem 1.1rem;
+    border: 2px solid var(--border); display: flex; flex-direction: column; gap: 1rem; transition: box-shadow .2s, transform .2s;}
+.tool-card:hover {box-shadow: 0 6px 24px rgba(50,150,250,0.09); transform: translateY(-3px) scale(1.01);}
+.tool-icon {font-size: 2.1rem; color: var(--primary);}
+.tool-title {font-size: 1.12rem; font-weight: 600; color: var(--fg);}
+.tool-desc {font-size: 0.97rem; color: #888; min-height: 42px;}
+.tool-btn {margin-top: auto; color: var(--primary); font-weight: bold; font-size: 1rem; align-self: flex-end;
+    cursor: pointer; background: none; border: none;}
+@media (max-width: 850px) { .site-title { font-size: 1.5rem;} .tools-grid { grid-template-columns: 1fr;} }
+/* MODAL */
+.modal-bg {position:fixed; left:0;top:0;width:100vw;height:100vh;background:rgba(30,40,55,0.45);display:none;z-index:100;}
+.modal {background:var(--card-bg);color:var(--fg);max-width:430px;margin:5vh auto 0 auto;padding:1.5rem 1.2rem;border-radius:2rem;
+    box-shadow:0 10px 38px rgba(0,0,0,0.14);position:relative; border: 2px solid var(--border);}
+.modal h2 {font-size:1.15rem;margin-bottom:1rem;}
+.modal .close-modal {position:absolute;right:1rem;top:1rem;background:none;border:none;font-size:1.5rem;color:var(--icon);cursor:pointer;}
+.modal label {font-weight:500;margin-bottom:2px;display:block;}
+.modal input, .modal select, .modal button, .modal textarea {
+    font-size: 1rem; padding: 0.5rem 0.7rem; margin-bottom: 0.7rem; border-radius: .8rem; border: 1px solid var(--border);
+    background: var(--card-bg); color: var(--fg);}
+.modal button {background: var(--primary); color: #fff; border: none; cursor: pointer; font-weight: bold; transition: background .2s;}
+.modal button:hover {background: #007be5;}
+.modal .result, .modal .output, .modal .bmi-status {font-weight:bold;color:var(--primary);}
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <span class="site-title">Ultimate Online Tools Hub</span>
+        <button class="toggle-theme" id="themeBtn" title="Toggle Dark/Light">
+            <i class="fa-regular fa-moon" id="moonIcon"></i>
+            <i class="fa-regular fa-sun" id="sunIcon" style="display:none"></i>
+        </button>
+    </header>
+    <div class="search-bar">
+        <input id="searchInput" type="text" placeholder="Search for a tool...">
+    </div>
+    <section class="tools-grid" id="toolsGrid"></section>
+</div>
+<div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalContent">
+        <button class="close-modal" onclick="closeModal()"><i class="fa fa-times"></i></button>
+        <div id="modalInner"></div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const tools = [
+    { title: "Unit Converter", icon: "fa-solid fa-ruler-combined", desc: "Convert length, weight, and temperature units.", build: buildUnitConverter },
+    { title: "Currency Converter", icon: "fa-solid fa-dollar-sign", desc: "Convert currencies (live rates).", build: buildCurrency },
+    { title: "Password Generator", icon: "fa-solid fa-lock", desc: "Generate ultra-secure random passwords.", build: buildPasswordGen },
+    { title: "QR Code Generator", icon: "fa-solid fa-qrcode", desc: "Create QR codes for any link or text.", build: buildQR },
+    { title: "Word & Character Counter", icon: "fa-solid fa-sort-numeric-up-alt", desc: "Count words and characters in text.", build: buildTextCounter },
+    { title: "BMI Calculator", icon: "fa-solid fa-heart-pulse", desc: "Calculate your BMI and health status.", build: buildBMI },
+    { title: "Color Converter", icon: "fa-solid fa-palette", desc: "Convert between HEX and RGB color codes.", build: buildColorConverter },
+    { title: "Lorem Ipsum Generator", icon: "fa-solid fa-align-left", desc: "Generate random Lorem Ipsum text.", build: buildLorem },
+    { title: "Base64 Encoder/Decoder", icon: "fa-solid fa-code", desc: "Encode or decode Base64 text.", build: buildBase64 },
+    { title: "Loan Calculator", icon: "fa-solid fa-coins", desc: "Calculate monthly payment for a loan.", build: buildLoan },
+    { title: "Age Calculator", icon: "fa-solid fa-user-clock", desc: "Calculate your exact age from date of birth.", build: buildAge },
+    { title: "Text Case Converter", icon: "fa-solid fa-text-height", desc: "Convert text to UPPERCASE, lowercase, or Capitalize.", build: buildCase },
+    { title: "JSON Formatter", icon: "fa-solid fa-code-branch", desc: "Format & minify JSON code.", build: buildJSON },
+    { title: "Stopwatch/Timer", icon: "fa-regular fa-clock", desc: "Simple stopwatch and countdown timer.", build: buildTimer },
+    { title: "Random Name Generator", icon: "fa-solid fa-user", desc: "Generate random first and last names.", build: buildRandomName },
+    { title: "Temporary Email Generator", icon: "fa-solid fa-envelope-open-text", desc: "Generate a fake email for quick signup.", build: buildTempEmail },
+    { title: "Image Compressor", icon: "fa-solid fa-image", desc: "Compress and optimize images.", build: buildImgCompressor },
+    { title: "IP & Location Finder", icon: "fa-solid fa-location-dot", desc: "Find your public IP and geolocation.", build: buildIP },
+    { title: "Random Password (Copy)", icon: "fa-solid fa-key", desc: "Generate and copy random strong passwords.", build: buildPassCopy },
+    { title: "Image to Text (OCR)", icon: "fa-solid fa-file-import", desc: "Extract text from images (OCR, demo).", build: buildOCR }
+];
+function renderTools() {
+    let grid = document.getElementById('toolsGrid');
+    let search = document.getElementById('searchInput').value.toLowerCase();
+    grid.innerHTML = "";
+    tools.filter(t=>t.title.toLowerCase().includes(search) || t.desc.toLowerCase().includes(search))
+        .forEach((tool,i)=>{
+        let card = document.createElement("div");
+        card.className = "tool-card";
+        card.innerHTML = `
+            <div class="tool-icon"><i class="${tool.icon}"></i></div>
+            <div class="tool-title">${tool.title}</div>
+            <div class="tool-desc">${tool.desc}</div>
+            <button class="tool-btn" onclick="openModal(${i})">Use</button>
+        `;
+        grid.appendChild(card);
+    });
+}
+renderTools();
+document.getElementById('searchInput').oninput = renderTools;
+function openModal(idx) {
+    document.getElementById('modalBg').style.display = 'block';
+    let inner = document.getElementById('modalInner');
+    inner.innerHTML = "";
+    tools[idx].build(inner);
+}
+function closeModal() {
+    document.getElementById('modalBg').style.display = 'none';
+}
+// Dark/Light
+const themeBtn = document.getElementById('themeBtn');
+const moonIcon = document.getElementById('moonIcon');
+const sunIcon = document.getElementById('sunIcon');
+function setTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark?"dark":"");
+    moonIcon.style.display = dark?"none":"inline";
+    sunIcon.style.display = dark?"inline":"none";
+    localStorage.setItem('theme', dark?"dark":"light");
+}
+themeBtn.onclick = ()=> setTheme(document.documentElement.getAttribute('data-theme')!=="dark");
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) setTheme(true);
+if (localStorage.getItem('theme')) setTheme(localStorage.getItem('theme')==="dark");
+
+// -----------ficher----------
+
+function buildUnitConverter(el) {
+    el.innerHTML = `<h2>Unit Converter</h2>
+    <label>Value:</label>
+    <input type="number" id="uc-value" step="any" value="1">
+    <select id="uc-type">
+        <option value="length">Length</option>
+        <option value="weight">Weight</option>
+        <option value="temp">Temperature</option>
+    </select>
+    <select id="uc-from"></select>
+    <span>to</span>
+    <select id="uc-to"></select>
+    <button id="uc-btn">Convert</button>
+    <div class="result" id="uc-result"></div>`;
+    const units = {
+        length: ["Meter", "Kilometer", "Centimeter", "Millimeter", "Mile", "Yard", "Foot", "Inch"],
+        weight: ["Kilogram", "Gram", "Milligram", "Pound", "Ounce"],
+        temp: ["Celsius", "Fahrenheit", "Kelvin"]
+    };
+    const lengthFactors = {"Meter":1,"Kilometer":1e3,"Centimeter":1e-2,"Millimeter":1e-3,"Mile":1609.34,"Yard":0.9144,"Foot":0.3048,"Inch":0.0254};
+    const weightFactors = {"Kilogram":1,"Gram":1e-3,"Milligram":1e-6,"Pound":0.453592,"Ounce":0.0283495};
+    function fillUCUnits(type) {
+        let from = el.querySelector('#uc-from'), to = el.querySelector('#uc-to');
+        from.innerHTML = to.innerHTML = "";
+        units[type].forEach(u => {
+            from.innerHTML += "<option>"+u+"</option>";
+            to.innerHTML += "<option>"+u+"</option>";
+        });
+    }
+    fillUCUnits('length');
+    el.querySelector('#uc-type').onchange = e=>fillUCUnits(e.target.value);
+    el.querySelector('#uc-btn').onclick = ()=>{
+        let val = parseFloat(el.querySelector('#uc-value').value);
+        let type = el.querySelector('#uc-type').value;
+        let from = el.querySelector('#uc-from').value, to = el.querySelector('#uc-to').value;
+        let res;
+        if(type==="length") res = val * lengthFactors[from] / lengthFactors[to];
+        else if(type==="weight") res = val * weightFactors[from] / weightFactors[to];
+        else {
+            if(from===to) res=val;
+            else if(from==="Celsius" && to==="Fahrenheit") res=val*9/5+32;
+            else if(from==="Celsius" && to==="Kelvin") res=val+273.15;
+            else if(from==="Fahrenheit" && to==="Celsius") res=(val-32)*5/9;
+            else if(from==="Fahrenheit" && to==="Kelvin") res=(val-32)*5/9+273.15;
+            else if(from==="Kelvin" && to==="Celsius") res=val-273.15;
+            else if(from==="Kelvin" && to==="Fahrenheit") res=(val-273.15)*9/5+32;
+        }
+        el.querySelector('#uc-result').textContent = "Result: "+ (res===undefined ? "Invalid!" : res);
+    };
+}
+
+function buildCurrency(el) {
+    el.innerHTML = `<h2>Currency Converter</h2>
+    <input type="number" id="cur-amt" value="1">
+    <select id="cur-from"></select>
+    <span>to</span>
+    <select id="cur-to"></select>
+    <button id="cur-btn">Convert</button>
+    <div class="result" id="cur-result"></div>
+    <small>Rates by exchangerate-api.com (demo/free API)</small>`;
+    // Minimal list, you can expand
+    let currencies = ["USD","EUR","GBP","JPY","CNY","TRY","IRR"];
+    let fromSel = el.querySelector('#cur-from'), toSel = el.querySelector('#cur-to');
+    currencies.forEach(c=>{
+        fromSel.innerHTML += `<option>${c}</option>`;
+        toSel.innerHTML += `<option>${c}</option>`;
+    });
+    toSel.value = "EUR";
+    el.querySelector('#cur-btn').onclick = ()=>{
+        let amt = +el.querySelector('#cur-amt').value;
+        let from = fromSel.value, to = toSel.value;
+        if(from==to) return el.querySelector('#cur-result').textContent="Result: "+amt;
+        fetch(`https://open.er-api.com/v6/latest/${from}`)
+        .then(x=>x.json()).then(data=>{
+            if(data && data.rates && data.rates[to]) {
+                el.querySelector('#cur-result').textContent = "Result: "+(amt*data.rates[to]).toFixed(4)+" "+to;
+            } else el.querySelector('#cur-result').textContent = "Error!";
+        }).catch(_=>{
+            el.querySelector('#cur-result').textContent = "Error!";
+        });
+    }
+}
+
+function buildPasswordGen(el) {
+    el.innerHTML = `<h2>Password Generator</h2>
+    <label>Password Length:</label>
+    <input type="number" id="pg-length" value="12" min="4" max="48" style="width:60px;">
+    <br>
+    <label><input type="checkbox" id="pg-upper" checked> Uppercase</label>
+    <label><input type="checkbox" id="pg-lower" checked> Lowercase</label>
+    <label><input type="checkbox" id="pg-num" checked> Numbers</label>
+    <label><input type="checkbox" id="pg-symbol" checked> Symbols</label>
+    <button id="pg-btn">Generate</button>
+    <div class="result" id="pg-result"></div>`;
+    el.querySelector('#pg-btn').onclick = ()=>{
+        let len = +el.querySelector('#pg-length').value;
+        let uc = el.querySelector('#pg-upper').checked, lc = el.querySelector('#pg-lower').checked;
+        let num = el.querySelector('#pg-num').checked, sym = el.querySelector('#pg-symbol').checked;
+        let chars = '';
+        if(uc) chars += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        if(lc) chars += 'abcdefghijklmnopqrstuvwxyz';
+        if(num) chars += '0123456789';
+        if(sym) chars += '!@#$%^&*()_+-=';
+        if(chars==="") {el.querySelector('#pg-result').textContent = "Select at least one type!"; return;}
+        let pass = '';
+        for(let i=0;i<len;i++) pass+=chars[Math.floor(Math.random()*chars.length)];
+        el.querySelector('#pg-result').textContent = pass;
+    }
+}
+
+function buildQR(el) {
+    el.innerHTML = `<h2>QR Code Generator</h2>
+    <label>Text/URL:</label>
+    <input type="text" id="qr-input" style="width:200px;">
+    <button id="qr-btn">Generate</button>
+    <div id="qr-result" style="margin-top:1em"></div>`;
+    el.querySelector('#qr-btn').onclick = ()=>{
+        let val = el.querySelector('#qr-input').value;
+        let res = el.querySelector('#qr-result');
+        res.innerHTML = "";
+        if(!val) return;
+        new QRCode(res, {text: val, width: 128, height: 128, colorDark:"#2d8cf0", colorLight:"#fff"});
+    }
+}
+
+function buildTextCounter(el) {
+    el.innerHTML = `<h2>Word & Character Counter</h2>
+    <label>Enter your text:</label>
+    <textarea id="tc-text" rows="4" style="width:90%"></textarea>
+    <div>Words: <span id="tc-words">0</span> | Characters: <span id="tc-chars">0</span></div>`;
+    let tcText = el.querySelector('#tc-text');
+    tcText.oninput = function(){
+        let t = tcText.value;
+        el.querySelector('#tc-words').textContent = (t.trim()===""?0:t.trim().split(/\s+/).length);
+        el.querySelector('#tc-chars').textContent = t.length;
+    }
+}
+
+function buildBMI(el) {
+    el.innerHTML = `<h2>BMI Calculator</h2>
+    <label>Weight (kg):</label>
+    <input type="number" id="bmi-w" step="0.1">
+    <label>Height (cm):</label>
+    <input type="number" id="bmi-h" step="0.1">
+    <button id="bmi-btn">Calculate BMI</button>
+    <div class="result" id="bmi-result"></div>
+    <div class="bmi-status" id="bmi-status"></div>`;
+    el.querySelector('#bmi-btn').onclick = ()=>{
+        let w = parseFloat(el.querySelector('#bmi-w').value);
+        let h = parseFloat(el.querySelector('#bmi-h').value)/100;
+        if(h<=0 || isNaN(w)) return;
+        let bmi = w/(h*h);
+        let stat = "";
+        if(bmi<18.5) stat="Underweight";
+        else if(bmi<25) stat="Normal";
+        else if(bmi<30) stat="Overweight";
+        else stat="Obese";
+        el.querySelector('#bmi-result').textContent = "BMI: "+bmi.toFixed(2);
+        el.querySelector('#bmi-status').textContent = stat;
+    }
+}
+
+function buildColorConverter(el) {
+    el.innerHTML = `<h2>Color Converter</h2>
+    <label>HEX:</label>
+    <input type="text" id="hex" placeholder="#2196f3">
+    <button id="toRGB">HEX→RGB</button>
+    <div class="output" id="hex-rgb"></div>
+    <label>RGB:</label>
+    <input type="text" id="rgb" placeholder="33,150,243">
+    <button id="toHEX">RGB→HEX</button>
+    <div class="output" id="rgb-hex"></div>`;
+    el.querySelector('#toRGB').onclick = function() {
+        let hex = el.querySelector('#hex').value.trim().replace(/^#/, '');
+        if(hex.length===3) hex = hex.split('').map(x=>x+x).join('');
+        if(hex.length!==6) return el.querySelector('#hex-rgb').textContent = "Invalid HEX!";
+        let r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+        el.querySelector('#hex-rgb').textContent = `RGB: ${r}, ${g}, ${b}`;
+    }
+    el.querySelector('#toHEX').onclick = function() {
+        let [r,g,b] = el.querySelector('#rgb').value.split(',').map(x=>parseInt(x.trim()));
+        if([r,g,b].some(x=>isNaN(x)||x<0||x>255)) return el.querySelector('#rgb-hex').textContent = "Invalid RGB!";
+        el.querySelector('#rgb-hex').textContent = "HEX: #" + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+    }
+}
+
+function buildLorem(el) {
+    el.innerHTML = `<h2>Lorem Ipsum Generator</h2>
+    <label>Paragraphs:</label>
+    <input type="number" id="lorem-p" value="2" min="1" max="10">
+    <button id="lorem-btn">Generate</button>
+    <textarea id="lorem-result" rows="6" style="width:95%;margin-top:.7em"></textarea>`;
+    let lipsum = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque efficitur, risus a scelerisque consequat, magna orci volutpat erat, nec sodales dolor urna a nisi. Vivamus rutrum, nibh eu sagittis scelerisque, urna massa viverra quam, at sollicitudin libero velit vitae lorem.`;
+    el.querySelector('#lorem-btn').onclick = function() {
+        let n = +el.querySelector('#lorem-p').value, res = [];
+        for(let i=0;i<n;i++) res.push(lipsum);
+        el.querySelector('#lorem-result').value = res.join("\n\n");
+    }
+}
+
+function buildBase64(el) {
+    el.innerHTML = `<h2>Base64 Encoder/Decoder</h2>
+    <label>Text:</label>
+    <textarea id="b64-text" rows="2" style="width:95%"></textarea>
+    <button id="b64-enc">Encode</button>
+    <button id="b64-dec">Decode</button>
+    <textarea id="b64-result" rows="2" style="width:95%"></textarea>`;
+    el.querySelector('#b64-enc').onclick = function() {
+        el.querySelector('#b64-result').value = btoa(el.querySelector('#b64-text').value);
+    }
+    el.querySelector('#b64-dec').onclick = function() {
+        try{el.querySelector('#b64-result').value = atob(el.querySelector('#b64-text').value);}
+        catch(e){el.querySelector('#b64-result').value = "Invalid Base64!";}
+    }
+}
+
+function buildLoan(el) {
+    el.innerHTML = `<h2>Loan Calculator</h2>
+    <label>Amount ($):</label>
+    <input type="number" id="loan-amt" value="10000">
+    <label>Annual Rate (%):</label>
+    <input type="number" id="loan-rate" value="5">
+    <label>Years:</label>
+    <input type="number" id="loan-yrs" value="3">
+    <button id="loan-btn">Calculate</button>
+    <div class="result" id="loan-res"></div>`;
+    el.querySelector('#loan-btn').onclick = function() {
+        let amt = +el.querySelector('#loan-amt').value, rate = +el.querySelector('#loan-rate').value/100/12, n = +el.querySelector('#loan-yrs').value*12;
+        let m = amt*rate*Math.pow(1+rate,n)/(Math.pow(1+rate,n)-1);
+        if(isFinite(m)) el.querySelector('#loan-res').textContent = "Monthly: $" + m.toFixed(2);
+        else el.querySelector('#loan-res').textContent = "Invalid data!";
+    }
+}
+
+function buildAge(el) {
+    el.innerHTML = `<h2>Age Calculator</h2>
+    <label>Date of Birth:</label>
+    <input type="date" id="age-dob">
+    <button id="age-btn">Calculate</button>
+    <div class="result" id="age-res"></div>`;
+    el.querySelector('#age-btn').onclick = function() {
+        let dob = new Date(el.querySelector('#age-dob').value);
+        if(isNaN(dob)) return;
+        let now = new Date(), y=now.getFullYear()-dob.getFullYear();
+        let m=now.getMonth()-dob.getMonth(), d=now.getDate()-dob.getDate();
+        if(d<0){m--;d+=new Date(now.getFullYear(),now.getMonth(),0).getDate();}
+        if(m<0){y--;m+=12;}
+        el.querySelector('#age-res').textContent = `Age: ${y} years, ${m} months, ${d} days`;
+    }
+}
+
+function buildCase(el) {
+    el.innerHTML = `<h2>Text Case Converter</h2>
+    <textarea id="case-in" rows="4" style="width:97%"></textarea>
+    <button id="case-upper">UPPERCASE</button>
+    <button id="case-lower">lowercase</button>
+    <button id="case-cap">Capitalize</button>
+    <textarea id="case-out" rows="4" style="width:97%"></textarea>`;
+    let input = null, output = null;
+    setTimeout(()=>{
+        input = el.querySelector('#case-in');
+        output = el.querySelector('#case-out');
+        el.querySelector('#case-upper').onclick = ()=> output.value = input.value.toUpperCase();
+        el.querySelector('#case-lower').onclick = ()=> output.value = input.value.toLowerCase();
+        el.querySelector('#case-cap').onclick = ()=> output.value = input.value.replace(/\b\w/g, c=>c.toUpperCase());
+    },0);
+}
+
+function buildJSON(el) {
+    el.innerHTML = `<h2>JSON Formatter/Minifier</h2>
+    <textarea id="json-in" rows="5" style="width:97%"></textarea>
+    <button id="json-format">Format</button>
+    <button id="json-min">Minify</button>
+    <textarea id="json-out" rows="5" style="width:97%"></textarea>`;
+    setTimeout(()=>{
+        let inpt = el.querySelector('#json-in'), out = el.querySelector('#json-out');
+        el.querySelector('#json-format').onclick = ()=>{
+            try{out.value = JSON.stringify(JSON.parse(inpt.value),null,2);}
+            catch{out.value="Invalid JSON!";}
+        }
+        el.querySelector('#json-min').onclick = ()=>{
+            try{out.value = JSON.stringify(JSON.parse(inpt.value));}
+            catch{out.value="Invalid JSON!";}
+        }
+    },0);
+}
+
+function buildTimer(el) {
+    el.innerHTML = `<h2>Stopwatch/Timer</h2>
+    <label>Countdown (sec):</label>
+    <input type="number" id="tmr-input" value="60" min="1" style="width:60px">
+    <button id="tmr-start">Start</button>
+    <button id="tmr-stop">Stop</button>
+    <div class="result" id="tmr-show">00:00</div>`;
+    let interval=null, t=0, cd=0;
+    function show(s) {
+        let m = Math.floor(s/60), ss = s%60;
+        el.querySelector('#tmr-show').textContent = (m<10?'0':'')+m+":"+(ss<10?'0':'')+ss;
+    }
+    el.querySelector('#tmr-start').onclick = function() {
+        if(interval) clearInterval(interval);
+        cd = +el.querySelector('#tmr-input').value;
+        t = cd;
+        show(t);
+        interval = setInterval(()=>{
+            t--;
+            show(t);
+            if(t<=0) clearInterval(interval);
+        },1000);
+    }
+    el.querySelector('#tmr-stop').onclick = ()=> {if(interval) clearInterval(interval);}
+}
+
+function buildRandomName(el) {
+    el.innerHTML = `<h2>Random Name Generator</h2>
+    <button id="name-btn">Generate Name</button>
+    <div class="result" id="name-res"></div>`;
+    let fnames = ["Oliver","Amelia","Jack","Sophia","Harry","Isabella","Jacob","Mia","Noah","Emily"];
+    let lnames = ["Smith","Johnson","Brown","Taylor","Williams","Wilson","Davies","Evans","Thomas","Walker"];
+    el.querySelector('#name-btn').onclick = function() {
+        let f = fnames[Math.floor(Math.random()*fnames.length)];
+        let l = lnames[Math.floor(Math.random()*lnames.length)];
+        el.querySelector('#name-res').textContent = `${f} ${l}`;
+    }
+}
+
+function buildTempEmail(el) {
+    el.innerHTML = `<h2>Temp Email Generator</h2>
+    <button id="temp-email-btn">Generate Email</button>
+    <div class="result" id="temp-email"></div>`;
+    el.querySelector('#temp-email-btn').onclick = function() {
+        let chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        let name = Array.from({length:8},_=>chars[Math.floor(Math.random()*chars.length)]).join('');
+        let domains = ['@maildrop.cc','@fakemail.net','@tempmail.dev'];
+        let email = name + domains[Math.floor(Math.random()*domains.length)];
+        el.querySelector('#temp-email').textContent = email;
+    }
+}
+
+function buildImgCompressor(el) {
+    el.innerHTML = `<h2>Image Compressor</h2>
+    <input type="file" id="imgc-in" accept="image/*">
+    <label>Quality (10-100):</label>
+    <input type="number" id="imgc-q" min="10" max="100" value="60">
+    <button id="imgc-btn">Compress</button>
+    <div class="result" id="imgc-out"></div>
+    <small>Client-side, for JPG/PNG only.</small>`;
+    el.querySelector('#imgc-btn').onclick = function() {
+        let file = el.querySelector('#imgc-in').files[0];
+        let q = +el.querySelector('#imgc-q').value/100;
+        if(!file) return el.querySelector('#imgc-out').textContent = "No file selected!";
+        if(q<0.1||q>1) return el.querySelector('#imgc-out').textContent = "Invalid quality!";
+        let reader = new FileReader();
+        reader.onload = function(evt) {
+            let img = new Image();
+            img.onload = function() {
+                let c = document.createElement('canvas');
+                c.width = img.width; c.height = img.height;
+                let ctx = c.getContext('2d'); ctx.drawImage(img,0,0);
+                c.toBlob(function(blob){
+                    let url = URL.createObjectURL(blob);
+                    el.querySelector('#imgc-out').innerHTML = `<a href="${url}" download="compressed.jpg">Download Compressed Image</a>`;
+                },'image/jpeg',q);
+            }
+            img.src = evt.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+}
+
+function buildIP(el) {
+    el.innerHTML = `<h2>IP & Location Finder</h2>
+    <button id="ip-btn">Get My IP</button>
+    <div class="result" id="ip-out"></div>`;
+    el.querySelector('#ip-btn').onclick = function() {
+        el.querySelector('#ip-out').textContent = "Loading...";
+        fetch('https://ipapi.co/json/').then(x=>x.json()).then(data=>{
+            el.querySelector('#ip-out').innerHTML =
+                `<b>IP:</b> ${data.ip}<br><b>Country:</b> ${data.country_name}<br><b>City:</b> ${data.city}`;
+        }).catch(_=>{
+            el.querySelector('#ip-out').textContent = "Error loading IP!";
+        });
+    }
+}
+
+function buildPassCopy(el) {
+    el.innerHTML = `<h2>Random Password with Copy</h2>
+    <button id="pw-btn">Generate</button>
+    <input type="text" id="pw-out" readonly style="width:70%">
+    <button id="pw-copy">Copy</button>
+    <div class="result" id="pw-note"></div>`;
+    el.querySelector('#pw-btn').onclick = ()=>{
+        let chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+        let pass = Array.from({length:14},_=>chars[Math.floor(Math.random()*chars.length)]).join('');
+        el.querySelector('#pw-out').value = pass; el.querySelector('#pw-note').textContent = "";
+    }
+    el.querySelector('#pw-copy').onclick = ()=>{
+        let v = el.querySelector('#pw-out').value;
+        if(!v) return;
+        navigator.clipboard.writeText(v); el.querySelector('#pw-note').textContent = "Copied!";
+    }
+}
+
+// OCR (Browser-based, simple)
+function buildOCR(el) {
+    el.innerHTML = `<h2>Image to Text (Simple OCR)</h2>
+    <label>Select Image (PNG/JPG, English only):</label>
+    <input type="file" id="ocr-img" accept="image/*">
+    <button id="ocr-btn">Extract Text</button>
+    <div class="result" id="ocr-out"></div>
+    <small>Note: Simple OCR (client-side, demo only).</small>`;
+    el.querySelector('#ocr-btn').onclick = function() {
+        let file = el.querySelector('#ocr-img').files[0];
+        if(!file) return el.querySelector('#ocr-out').textContent = "No image selected!";
+        // Real OCR needs Tesseract.js or API. Demo: shows file loaded.
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            let img = new Image();
+            img.onload = function() {
+                el.querySelector('#ocr-out').textContent = "Demo: Image loaded. (For real OCR, use Tesseract.js)";
+            }
+            img.src = evt.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+}
+</script>
+</body>
+</html>
